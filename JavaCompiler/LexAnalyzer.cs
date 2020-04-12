@@ -23,7 +23,7 @@ namespace JavaCompiler
             returnt, intt, booleant, ift, elset, whilet, printlnt, lengtht,
             truet, falset, thist, newt, finalt, floatt,
 
-            relop, addop, mulop, assignop,
+            relop, addop, mulop, assignop, notop,
 
             lparent, rparent, lcurlyt, rcurlyt, lsqrbract, rsqrbract, commat,
             semicolont, periodt, qoutet,
@@ -556,6 +556,10 @@ namespace JavaCompiler
             else if(Lexeme[0] == '\"')
             {
                 Token = Symbol.qoutet;
+            }
+            else if(Lexeme[0] == '!')
+            {
+                Token = Symbol.notop;
             }
             
         }

@@ -1,8 +1,8 @@
 ﻿/********************************************************************
 *** NAME : ADITYA HARSHVARDHAN                                    ***
 *** CLASS : CSC 446                                               ***
-*** ASSIGNMENT : Recursive Descent Parser Actions                 ***
-*** DUE DATE : 3/30/2020                                          ***
+*** ASSIGNMENT : Recursive Descent Parser Expressions             ***
+*** DUE DATE : 4/3/2020                                          ***
 *** INSTRUCTOR : Dr. Hamer                                        ***
 *********************************************************************
 *** DESCRIPTION : This program reads from a java source code file ***
@@ -33,9 +33,9 @@ namespace JavaCompiler
         static int Main(string[] args)
         {
 
-            Console.WriteLine("Assignment 5 - Java Recursive Descent Parser Actions");
+            Console.WriteLine("Assignment 6 - Java Recursive Descent Parser Expression");
             Console.WriteLine("Name - Aditya Harshvardhan");
-            Console.WriteLine("Due date - 3/30/2020");
+            Console.WriteLine("Due date - 4/3/2020");
             Console.WriteLine("");
             Console.Write("Press any key to begin... ");
             Console.ReadKey();

@@ -52,8 +52,8 @@ namespace JavaCompiler
                 LexAnalyzer.stream = new StreamReader(args[0]);
                 LexAnalyzer.Token = LexAnalyzer.Symbol.unknownt;
                 LexAnalyzer.LineNo = 1;
-
-                RecursiveDescentParser.BeginProgramParser();
+                var sourceFileName = args[0];
+                RecursiveDescentParser.BeginProgramParser(sourceFileName);
 
             }
             Console.WriteLine();

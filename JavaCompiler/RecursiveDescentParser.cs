@@ -196,17 +196,6 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-
-        //private static void MoreFactor()
-        //{
-        //    if (myLex.Token == Symbol.mulop)
-        //    {
-        //        Mulop();
-        //        Factor();
-        //        MoreFactor();
-        //    }
-        //}
-
         private static TableEntry MoreFactor(TableEntry MoreFactor_Ptr)
         {
             if (myLex.Token == Symbol.mulop)
@@ -247,8 +236,7 @@ namespace JavaCompiler
             Factor_Ptr = MoreFactor(Factor_Ptr);
 
             return Factor_Ptr;
-            //Factor();
-            //MoreFactor();
+            
         }
 
         /********************************************************************
@@ -270,13 +258,6 @@ namespace JavaCompiler
             {
                 var temp_ptr = NewTempTableEntry();
                 TableEntry Term_Ptr;
-
-                //temp_ptr.Offset = currentOffset;
-                //temp_ptr.Type = VarType.intType;
-                //temp_ptr.Size = 2;
-                //temp_ptr.IsFuncParam = false;
-                
-                //var methodEntr = SymTable.Lookup<FuncEntry>(currentMethodName);
 
                 var Op = Addop();
                 Term_Ptr = Term();
@@ -305,9 +286,6 @@ namespace JavaCompiler
         ********************************************************************/
         private static TableEntry SimpleExpr()
         {
-            //Term();
-            //MoreTerm();
-
             TableEntry Term_Ptr = null;
 
             Term_Ptr = Term();
@@ -560,7 +538,7 @@ namespace JavaCompiler
                             Expr_Ptr = Expr();
                             EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(tabEntry), "=", ConvertEntryToBasePointer(Expr_Ptr)));
                         
-                            //Expr();
+                            
                         }
                     }
                     else
@@ -569,7 +547,6 @@ namespace JavaCompiler
                         Expr_Ptr = Expr();
                         EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(tabEntry), "=", ConvertEntryToBasePointer(Expr_Ptr)));
 
-                        //Expr();
                     }
 
                 }

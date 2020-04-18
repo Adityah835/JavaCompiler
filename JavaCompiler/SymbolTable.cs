@@ -15,6 +15,7 @@ namespace JavaCompiler
         public VariableType Type;
         public int Offset;
         public int Size;
+        public bool IsFuncParam;
     }
 
     //CONSTANT
@@ -89,13 +90,35 @@ namespace JavaCompiler
             {
                 if (tableEntry.Value.Lexeme == Lexeme)
                 {
+
                     return (T)Convert.ChangeType(tableEntry.Value, typeof(T));
+                    
                 }
 
                 tableEntry = tableEntry.Next;
             }
 
-            return (T)Convert.ChangeType(tableEntry.Value, typeof(TableEntry));
+            return (T)Convert.ChangeType(tableEntry.Value, typeof(T));
+        }
+
+        public TableEntry Lookup(string Lexeme)
+        {
+            var position = Hash(Lexeme);
+            var tableEntry = tableEntries[position]?.First;
+
+            while (tableEntry != null)
+            {
+                if (tableEntry.Value.Lexeme == Lexeme)
+                {
+
+                    return tableEntry.Value;
+
+                }
+
+                tableEntry = tableEntry.Next;
+            }
+
+            return null;
         }
 
         public void DeleteDepth(int Depth)
@@ -171,7 +194,7 @@ namespace JavaCompiler
                 tableEntries[position].AddFirst(classEntry);
                 
             }
-            else if (tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
+            else if (tableEntries[position].First != null && tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
             {
 
                 Console.Write("Error at Line " + LexAnalyzer.LineNo + " : \"" + Lexeme + "\" is already defined. Press any key to exit....");
@@ -206,7 +229,7 @@ namespace JavaCompiler
                 tableEntries[position].AddFirst(constEntry);
 
             }
-            else if (tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
+            else if (tableEntries[position].First != null && tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
             {
 
                 Console.Write("Error at Line " + LexAnalyzer.LineNo + " : \"" + Lexeme + "\" is already defined. Press any key to exit....");
@@ -240,7 +263,7 @@ namespace JavaCompiler
                 tableEntries[position].AddFirst(funcEntry);
 
             }
-            else if (tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
+            else if (tableEntries[position].First != null && tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
             {
 
                 Console.Write("Error at Line " + LexAnalyzer.LineNo + " : \"" + Lexeme + "\" is already defined. Press any key to exit....");
@@ -274,7 +297,7 @@ namespace JavaCompiler
                 tableEntries[position].AddFirst(varEntry);
 
             }
-            else if (tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
+            else if (tableEntries[position].First != null && tableEntries[position].First.Value.Lexeme == Lexeme && tableEntries[position].First.Value.Depth == Depth)
             {
 
                 Console.Write("Error at Line " + LexAnalyzer.LineNo + " : \"" + Lexeme + "\" is already defined. Press any key to exit....");

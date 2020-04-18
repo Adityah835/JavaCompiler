@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using Symbol = JavaCompiler.LexAnalyzer.Symbol;
 using myLex = JavaCompiler.LexAnalyzer;
 using VarType = JavaCompiler.VariableType;
+using System.Collections.Generic;
 
 namespace JavaCompiler
 {
@@ -80,9 +82,11 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Mulop()
+        private static string Mulop()
         {
+            var mulop = myLex.Lexeme;
             match(Symbol.mulop);
+            return mulop;
         }
 
         /********************************************************************
@@ -98,9 +102,11 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Addop()
+        private static string Addop()
         {
+            var addop = myLex.Lexeme;
             match(Symbol.addop);
+            return addop;
         }
 
         /********************************************************************
@@ -117,32 +123,45 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Factor()
+        //private static void Factor()
+        private static TableEntry Factor(TableEntry Factor_Ptr)
         {
+            TableEntry TempEntr;
+
             if(myLex.Token == Symbol.idt)
             {
                 CheckIfDeclaredVariable(myLex.Lexeme);
+                //CheckIfDeclaredVariable(Factor_Ptr.Lexeme);
+                Factor_Ptr = SymTable.Lookup(myLex.Lexeme);
                 match(Symbol.idt);
             }
             else if (myLex.Token == Symbol.numt)
             {
+                Factor_Ptr = NewTempTableEntry();
+                EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(Factor_Ptr), "=", myLex.Lexeme));
                 match(Symbol.numt);
             }
             else if (myLex.Token == Symbol.lparent)
             {
                 match(Symbol.lparent);
-                Expr();
+                Factor_Ptr = Expr();
                 match(Symbol.rparent);
             }
             else if (myLex.Token == Symbol.notop)
             {
+                TempEntr = NewTempTableEntry();
                 match(Symbol.notop);
-                Factor();
+                //Factor();
+                Factor_Ptr = Factor(Factor_Ptr);
+                EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(TempEntr), "=", "!" + ConvertEntryToBasePointer(Factor_Ptr)));
             }
             else if (myLex.Token == Symbol.addop)
             {
+                TempEntr = NewTempTableEntry();
                 SignOp();
-                Factor();
+                //Factor();
+                Factor_Ptr = Factor(Factor_Ptr);
+                EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(TempEntr), "=", "-1", "*",  ConvertEntryToBasePointer(Factor_Ptr)));
             }
             else if (myLex.Token == Symbol.truet)
             {
@@ -160,6 +179,7 @@ namespace JavaCompiler
                 Console.ReadKey();
                 Environment.Exit(-1);
             }
+            return Factor_Ptr;
 
         }
 
@@ -176,15 +196,22 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-
-        private static void MoreFactor()
+        private static TableEntry MoreFactor(TableEntry MoreFactor_Ptr)
         {
             if (myLex.Token == Symbol.mulop)
             {
-                Mulop();
-                Factor();
-                MoreFactor();
+                var tempEntr = NewTempTableEntry();
+                TableEntry Factor_Ptr = null;
+
+                var Op = Mulop();
+
+                Factor_Ptr = Factor(Factor_Ptr);
+                MoreFactor(MoreFactor_Ptr);
+                EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(tempEntr), "=", ConvertEntryToBasePointer(MoreFactor_Ptr), Op, ConvertEntryToBasePointer(Factor_Ptr)));
+
+                MoreFactor_Ptr = tempEntr;
             }
+            return MoreFactor_Ptr;
         }
 
         /********************************************************************
@@ -200,33 +227,48 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Term()
+        private static TableEntry Term()
         {
-            Factor();
-            MoreFactor();
+            TableEntry Factor_Ptr = null;
+
+
+            Factor_Ptr = Factor(Factor_Ptr);
+            Factor_Ptr = MoreFactor(Factor_Ptr);
+
+            return Factor_Ptr;
+            
         }
 
-    /********************************************************************
-    *** FUNCTION MoreTerm                                             ***
-    *********************************************************************
-    *** DESCRIPTION : This function is the grammar rule for a more    ***
-    *** terms in the program                                          ***
-    ***                                                               ***
-    ***         MoreTerm -> Addop Term MoreTerm |  ε                  ***
-    ***                                                               ***
-    *** INPUT ARGS : -                                                ***
-    *** OUTPUT ARGS : -                                               ***
-    *** IN/OUT ARGS : -                                               ***
-    *** RETURN : void                                                 ***
-    ********************************************************************/
-        private static void MoreTerm()
+        /********************************************************************
+        *** FUNCTION MoreTerm                                             ***
+        *********************************************************************
+        *** DESCRIPTION : This function is the grammar rule for a more    ***
+        *** terms in the program                                          ***
+        ***                                                               ***
+        ***         MoreTerm -> Addop Term MoreTerm |  ε                  ***
+        ***                                                               ***
+        *** INPUT ARGS : -                                                ***
+        *** OUTPUT ARGS : -                                               ***
+        *** IN/OUT ARGS : -                                               ***
+        *** RETURN : void                                                 ***
+        ********************************************************************/
+        private static TableEntry MoreTerm(TableEntry MoreTerm_Ptr)
         {
             if (myLex.Token == Symbol.addop)
             {
-                Addop();
-                Term();
-                MoreTerm();
+                var temp_ptr = NewTempTableEntry();
+                TableEntry Term_Ptr;
+
+                var Op = Addop();
+                Term_Ptr = Term();
+
+                EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(temp_ptr), "=",ConvertEntryToBasePointer(MoreTerm_Ptr), Op, ConvertEntryToBasePointer(Term_Ptr)));
+
+                MoreTerm_Ptr = temp_ptr;
+
+                return MoreTerm(MoreTerm_Ptr);
             }
+            return MoreTerm_Ptr;
         }
 
         /********************************************************************
@@ -242,10 +284,14 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void SimpleExpr()
+        private static TableEntry SimpleExpr()
         {
-            Term();
-            MoreTerm();
+            TableEntry Term_Ptr = null;
+
+            Term_Ptr = Term();
+            Term_Ptr = MoreTerm(Term_Ptr);
+
+            return Term_Ptr;
         }
 
         /********************************************************************
@@ -261,9 +307,11 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Relation()
+        private static TableEntry Relation()
         {
-            SimpleExpr();            
+            TableEntry SimpleExpr_Ptr = null;
+            SimpleExpr_Ptr = SimpleExpr();
+            return SimpleExpr_Ptr;
         }
         
 
@@ -280,9 +328,9 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        private static void Expr()
+        private static TableEntry Expr()
         {
-
+            TableEntry Relation_Ptr = null;
             switch (myLex.Token)
             {
                 case Symbol.idt:
@@ -291,10 +339,10 @@ namespace JavaCompiler
                 case Symbol.notop:
                 case Symbol.addop:
                 case Symbol.truet:
-                case Symbol.falset: Relation(); break;
+                case Symbol.falset: Relation_Ptr = Relation(); break;
                 default: break;
             }
-
+            return Relation_Ptr;
             
         }
     
@@ -317,26 +365,201 @@ namespace JavaCompiler
         }
 
         /********************************************************************
-        *** FUNCTION AssignStat                                           ***
+        *** FUNCTION ParamsTails                                          ***
         *********************************************************************
-        *** DESCRIPTION : This function is grammar rule for assignment    ***
-        *** statement in the program                                      ***
+        *** DESCRIPTION : This function is grammar rule for method call   ***
+        *** parameter tail in the program                                 ***
         ***                                                               ***
-        ***           AssignStat -> idt = Expr                            ***
+        ***     ParamsTail -> , idt ParamsTail | , num ParamsTail| ε      ***
         ***                                                               ***
         *** INPUT ARGS : -                                                ***
         *** OUTPUT ARGS : -                                               ***
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-
-        private static void AssignStat()
+        private static void ParamsTail()
         {
-            CheckIfDeclaredVariable(myLex.Lexeme);
+            if (myLex.Token == Symbol.commat)
+            {
+                match(Symbol.commat);
+
+                TableEntry entry = SymTable.Lookup(myLex.Lexeme);
+
+                if (myLex.Token == Symbol.idt)
+                {
+                    match(Symbol.idt);
+                    ParamsTail();
+
+                    EmitCode(FormatThreeAddrCode("push", ConvertEntryToBasePointer(entry)));
+                }
+                else if (myLex.Token == Symbol.numt)
+                {
+                    var numEntr = myLex.Lexeme;
+                    match(Symbol.numt);
+                    ParamsTail();
+
+                    EmitCode(FormatThreeAddrCode("push", numEntr));
+                }
+
+                
+            }
+
+        }
+
+        /********************************************************************
+        *** FUNCTION Params                                               ***
+        *********************************************************************
+        *** DESCRIPTION : This function is grammar rule for method call   ***
+        *** parameters in the program                                     ***
+        ***                                                               ***
+        ***        MethodCall -> idt ParamsTail| num ParamsTail| ε        ***
+        ***                                                               ***
+        *** INPUT ARGS : -                                                ***
+        *** OUTPUT ARGS : -                                               ***
+        *** IN/OUT ARGS : -                                               ***
+        *** RETURN : void                                                 ***
+        ********************************************************************/
+        private static void Params()
+        {
+            if(myLex.Token == Symbol.idt)
+            {
+                TableEntry entry = SymTable.Lookup(myLex.Lexeme);
+                
+                match(Symbol.idt);
+                ParamsTail();
+
+                EmitCode(FormatThreeAddrCode("push", ConvertEntryToBasePointer(entry)));
+            }
+            else if(myLex.Token == Symbol.numt)
+            {
+                var numEntr = myLex.Lexeme;
+
+                match(Symbol.numt);
+                ParamsTail();
+
+                EmitCode(FormatThreeAddrCode("push", numEntr));
+            }
+
+
+        }
+
+        /********************************************************************
+        *** FUNCTION ClassName                                            ***
+        *********************************************************************
+        *** DESCRIPTION : This function is grammar rule for class name of ***
+        *** a methodcall in the program                                   ***
+        ***                                                               ***
+        ***                      ClassName -> idt                         ***
+        ***                                                               ***
+        *** INPUT ARGS : -                                                ***
+        *** OUTPUT ARGS : -                                               ***
+        *** IN/OUT ARGS : -                                               ***
+        *** RETURN : void                                                 ***
+        ********************************************************************/
+        private static void ClassName()
+        {
+            match(Symbol.idt);
+        }
+
+
+        /********************************************************************
+        *** FUNCTION MethodCall                                           ***
+        *********************************************************************
+        *** DESCRIPTION : This function is grammar rule for method call in***
+        *** the program                                                   ***
+        ***                                                               ***
+        ***            MethodCall -> ClassName.idt ( Params )             ***
+        ***                                                               ***
+        *** INPUT ARGS : -                                                ***
+        *** OUTPUT ARGS : -                                               ***
+        *** IN/OUT ARGS : -                                               ***
+        *** RETURN : void                                                 ***
+        ********************************************************************/
+        private static void MethodCall()
+        {
+            ClassName();
+            match(Symbol.periodt);
+
+            currentCalledMethodName = myLex.Lexeme;
 
             match(Symbol.idt);
-            match(Symbol.assignop);
-            Expr();
+            match(Symbol.lparent);
+            Params();
+            match(Symbol.rparent);
+
+            EmitCode(FormatThreeAddrCode("call", currentCalledMethodName));
+            
+        }
+
+
+        /********************************************************************
+        *** FUNCTION AssignStat                                           ***
+        *********************************************************************
+        *** DESCRIPTION : This function is grammar rule for assignment    ***
+        *** statement in the program                                      ***
+        ***                                                               ***
+        ***    AssignStat -> idt = Expr | idt = MethodCall | MethodCall   ***
+        ***                                                               ***
+        *** INPUT ARGS : -                                                ***
+        *** OUTPUT ARGS : -                                               ***
+        *** IN/OUT ARGS : -                                               ***
+        *** RETURN : void                                                 ***
+        ********************************************************************/
+        private static void AssignStat()
+        {
+            var tabEntry = SymTable.Lookup(myLex.Lexeme);
+
+            if (tabEntry != null)
+            {
+                if (tabEntry.TypeOfEntry == EntryType.classEntry)
+                {
+                    MethodCall();
+                }
+                else
+                {
+                    TableEntry Expr_Ptr = null;
+                    CheckIfDeclaredVariable(myLex.Lexeme);
+                    currentExprVar = myLex.Lexeme;                  
+                    match(Symbol.idt);
+                    match(Symbol.assignop);
+
+                    if (myLex.Token == Symbol.idt)
+                    {
+                        var idEntry = SymTable.Lookup(myLex.Lexeme);
+                        if (idEntry.TypeOfEntry == EntryType.classEntry)
+                        {
+                            MethodCall();
+                            var entry = SymTable.Lookup(currentExprVar);
+                            EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(entry), "=" , "_ax"));
+                        }
+                        else
+                        {
+                            //New Stuff
+                            Expr_Ptr = Expr();
+                            EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(tabEntry), "=", ConvertEntryToBasePointer(Expr_Ptr)));
+                        
+                            
+                        }
+                    }
+                    else
+                    {
+                        //New Stuff
+                        Expr_Ptr = Expr();
+                        EmitCode(FormatThreeAddrCode(ConvertEntryToBasePointer(tabEntry), "=", ConvertEntryToBasePointer(Expr_Ptr)));
+
+                    }
+
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error at Line " + myLex.LineNo + " : \"" + myLex.Lexeme + "\" is not defined ");
+                Console.WriteLine("");
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                Environment.Exit(-1);
+            }
+
         }
 
         /********************************************************************
@@ -434,6 +657,7 @@ namespace JavaCompiler
                 SymTable.Insert(myLex.Lexeme, Symbol.idt, currentDepth, EntryType.variableEntry);
                 SymTable.Lookup<VarEntry>(myLex.Lexeme).Offset = currentOffset;
                 SymTable.Lookup<VarEntry>(myLex.Lexeme).Type = VarType;
+                SymTable.Lookup<VarEntry>(myLex.Lexeme).IsFuncParam = true;
                 UpdateCurrentOffset();
                 UpdateVarSize();
 
@@ -468,6 +692,7 @@ namespace JavaCompiler
                 SymTable.Insert(myLex.Lexeme, Symbol.idt, currentDepth, EntryType.variableEntry);
                 SymTable.Lookup<VarEntry>(myLex.Lexeme).Offset = currentOffset;
                 SymTable.Lookup<VarEntry>(myLex.Lexeme).Type = VarType;
+                SymTable.Lookup<VarEntry>(myLex.Lexeme).IsFuncParam = true;
                 UpdateCurrentOffset();
                 UpdateVarSize();
 
@@ -508,6 +733,11 @@ namespace JavaCompiler
                 SymTable.Lookup<ClassEntry>(currentClassName).FunctionNames.AddFirst(myLex.Lexeme);
 
                 currentMethodName = myLex.Lexeme;
+
+                // Proc <currentMethodName>
+                EmitCode(FormatThreeAddrCode("proc", myLex.Lexeme));
+                //
+
                 currentSizeOfLocalVars = 0;
 
                 match(Symbol.idt);
@@ -520,17 +750,24 @@ namespace JavaCompiler
                 match(Symbol.rparent);
                 match(Symbol.lcurlyt);
                 VarDecl();
+
+
+                SymTable.Lookup<FuncEntry>(currentMethodName).SizeOfLocalVar = currentSizeOfLocalVars;
+
                 SeqOfStatements();
                 match(Symbol.returnt);
                 Expr();
                 match(Symbol.semicolont);
                 match(Symbol.rcurlyt);
 
+                EmitCode(FormatThreeAddrCode("endp", currentMethodName));
+                EmitCode(FormatThreeAddrCode());
+
                 SymTable.WriteTable(currentDepth);
                 SymTable.DeleteDepth(currentDepth);
                 currentDepth -= 1;
 
-                SymTable.Lookup<FuncEntry>(currentMethodName).SizeOfLocalVar = currentSizeOfLocalVars;
+                //SymTable.Lookup<FuncEntry>(currentMethodName).SizeOfLocalVar = currentSizeOfLocalVars;
 
                 MethodDecl();
             }
@@ -715,7 +952,7 @@ namespace JavaCompiler
             SymTable.Insert(myLex.Lexeme, Symbol.idt, currentDepth, EntryType.classEntry);
             currentClassName = myLex.Lexeme;
             currentMethodName = string.Empty;
-
+            
             match(Symbol.idt);
 
             if (myLex.Token == Symbol.extendst)
@@ -816,10 +1053,12 @@ namespace JavaCompiler
             match(Symbol.statict);
             match(Symbol.voidt);
 
-            SetReturnType(Symbol.voidt);
+ 
             SymTable.Insert(myLex.Lexeme, Symbol.maint, currentDepth, EntryType.functionEntry);
             SymTable.Lookup<FuncEntry>(myLex.Lexeme).ReturnType = VarType;
             currentMethodName = myLex.Lexeme;
+
+            EmitCode(FormatThreeAddrCode("proc", currentMethodName));
 
             match(Symbol.maint);
             match(Symbol.lparent);
@@ -836,6 +1075,8 @@ namespace JavaCompiler
             SeqOfStatements();
             match(Symbol.rcurlyt);
 
+            EmitCode(FormatThreeAddrCode("endp", currentMethodName));
+
             SymTable.WriteTable(currentDepth);
             SymTable.DeleteDepth(currentDepth);
 
@@ -847,6 +1088,7 @@ namespace JavaCompiler
             SymTable.DeleteDepth(currentDepth);
             
             currentDepth -= 1;
+            
 
         }
         private static void UpdateCurrentOffset()
@@ -857,21 +1099,6 @@ namespace JavaCompiler
                 case VarType.floatType: currentOffset += 4; break;
                 case VarType.intType: currentOffset += 2; break;
                 case VarType.voidType: currentOffset += 0; break;
-            }
-        }
-
-        private static void SetReturnType(Symbol Token)
-        {
-            switch (Token)
-            {
-                case Symbol.booleant: VarType = VarType.booleanType; break;
-                case Symbol.floatt: VarType = VarType.floatType; break;
-                case Symbol.intt: VarType = VarType.intType; break;
-                case Symbol.voidt: VarType = VarType.voidType; break;
-                default: Console.WriteLine("Fatal Error! The return type cannot be: " + Token + ". Press Any key to exit..."); 
-                         Console.ReadKey();  
-                         Environment.Exit(-1); 
-                         break;
             }
         }
 
@@ -921,6 +1148,71 @@ namespace JavaCompiler
             }
         }
 
+        private static VarEntry NewTempTableEntry()
+        {
+            string temp = "_t" + newTempCount.ToString();
+            SymTable.Insert(temp, Symbol.idt, currentDepth, EntryType.variableEntry);
+
+            VarEntry varEntry = SymTable.Lookup<VarEntry>(temp);
+            varEntry.Offset = currentOffset;
+            varEntry.Size += 2;
+
+            currentOffset += varEntry.Size;
+
+            newTempCount++;
+            return varEntry;
+        }
+
+        private static string ConvertEntryToBasePointer(TableEntry entry)
+        {
+            if(entry.Depth > 1)
+            {
+                if(entry.TypeOfEntry == EntryType.variableEntry)
+                {
+                    var VarEntr = SymTable.Lookup<VarEntry>(entry.Lexeme);
+                    var Method = SymTable.Lookup<FuncEntry>(currentMethodName);
+
+                    if (VarEntr.IsFuncParam)
+                    {
+                        return "_bp+" + (VarEntr.Offset + 4).ToString();
+                    }
+                    else
+                    {
+                        return "_bp-" + (Math.Abs(Method.SizeOfParameters - VarEntr.Offset) + 2).ToString();
+                    }
+                }
+                else if(entry.TypeOfEntry == EntryType.constEntry)
+                {
+                    var ConstEntr = SymTable.Lookup<ConstEntry>(entry.Lexeme);
+                    var Method = SymTable.Lookup<FuncEntry>(currentMethodName);
+
+                    return "_bp-" + (Math.Abs(Method.SizeOfParameters - ConstEntr.Offset) + 2).ToString();
+                }
+                
+                return string.Empty;
+            }
+            else
+            {
+                return entry.Lexeme;
+            }
+        }
+
+        private static string FormatThreeAddrCode(string idt1 = " ", string equals = " ", string idt2 = " ", string op = " ", string idt3 = " ")
+        {
+            return String.Format("{0, -6} {1, -4} {2, -6} {3, -4} {4, -6}", idt1, equals, idt2, op, idt3);
+        }
+
+        private static void EmitCode(string code)
+        {
+            threeAddressCode.Add(code);
+        }
+
+        private static void GenerateThreeAddressCodeFile()
+        {
+            var threeAddrCodeFileName = Path.GetFileNameWithoutExtension(sourceFileName) + ".tac";
+            File.WriteAllLines(threeAddrCodeFileName, threeAddressCode.ToArray());
+        }
+
         private static SymbolTable SymTable;
         private static int currentDepth;
         private static int currentOffset;
@@ -928,7 +1220,13 @@ namespace JavaCompiler
         private static string currentMethodName;
         private static string currentClassName;
         private static VarType VarType;
-
+        private static string currentCalledMethodName;
+        private static string currentExprVar;
+        private static List<string> threeAddressCode;
+        private static int newTempCount = 1;
+        private static string sourceFileName; 
+       
+               
         /********************************************************************
         *** FUNCTION BeginProgramParser                                   ***
         *********************************************************************
@@ -942,11 +1240,13 @@ namespace JavaCompiler
         *** IN/OUT ARGS : -                                               ***
         *** RETURN : void                                                 ***
         ********************************************************************/
-        public static void BeginProgramParser()
+        public static void BeginProgramParser(string fileName)
         {
             SymTable = new SymbolTable();
             currentDepth = 0;
             currentOffset = 0;
+            threeAddressCode = new List<string>();
+            sourceFileName = fileName;
 
             myLex.GetNextToken();
 
@@ -969,6 +1269,8 @@ namespace JavaCompiler
                 Console.ReadKey();
                 Environment.Exit(-1);
             }
+
+            GenerateThreeAddressCodeFile();
         }
 
 

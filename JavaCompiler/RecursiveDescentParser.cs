@@ -330,7 +330,7 @@ namespace JavaCompiler
         ********************************************************************/
         private static TableEntry Expr()
         {
-            TableEntry Rel_Ptr = null;
+            TableEntry Relation_Ptr = null;
             switch (myLex.Token)
             {
                 case Symbol.idt:
@@ -339,10 +339,10 @@ namespace JavaCompiler
                 case Symbol.notop:
                 case Symbol.addop:
                 case Symbol.truet:
-                case Symbol.falset: Rel_Ptr = Relation(); break;
+                case Symbol.falset: Relation_Ptr = Relation(); break;
                 default: break;
             }
-            return Rel_Ptr;
+            return Relation_Ptr;
             
         }
     
@@ -1178,12 +1178,7 @@ namespace JavaCompiler
                     }
                     else
                     {
-                        if (Method.SizeOfParameters == 0)
-                        {
-                            return "_bp-" + (VarEntr.Offset + 2).ToString();
-                        }
-                        return "_bp-" + (VarEntr.Offset - 2).ToString();
-
+                        return "_bp-" + (Math.Abs(Method.SizeOfParameters - VarEntr.Offset) + 2).ToString();
                     }
                 }
                 else if(entry.TypeOfEntry == EntryType.constEntry)
@@ -1191,11 +1186,7 @@ namespace JavaCompiler
                     var ConstEntr = SymTable.Lookup<ConstEntry>(entry.Lexeme);
                     var Method = SymTable.Lookup<FuncEntry>(currentMethodName);
 
-                    if (Method.SizeOfParameters == 0)
-                    {
-                        return "_bp-" + (ConstEntr.Offset + 2).ToString();
-                    }
-                    return "_bp-" + (ConstEntr.Offset - 2).ToString();
+                    return "_bp-" + (Math.Abs(Method.SizeOfParameters - ConstEntr.Offset) + 2).ToString();
                 }
                 
                 return string.Empty;

@@ -1,15 +1,16 @@
 ﻿/********************************************************************
 *** NAME : ADITYA HARSHVARDHAN                                    ***
 *** CLASS : CSC 446                                               ***
-*** ASSIGNMENT : Recursive Descent Parser Expressions             ***
-*** DUE DATE : 4/3/2020                                          ***
+*** ASSIGNMENT : Three Address Code Generator                     ***
+*** DUE DATE : 4/15/2020                                          ***
 *** INSTRUCTOR : Dr. Hamer                                        ***
 *********************************************************************
 *** DESCRIPTION : This program reads from a java source code file ***
 *** determines the appropriate token types, stores the values in  ***
 *** appropriate global variable and parses the source files based ***
 *** on defined grammar rules and stores the lexemes in a symbol   ***
-*** table.                                                        ***
+*** table. AFter that it generates an intermediate three address  ***
+*** code.                                                         ***
 ********************************************************************/
 using System;
 using System.Collections.Generic;
